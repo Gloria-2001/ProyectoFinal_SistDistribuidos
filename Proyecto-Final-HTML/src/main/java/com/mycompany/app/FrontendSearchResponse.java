@@ -23,22 +23,21 @@
  */
 
 package com.mycompany.app;  
-import java.math.BigInteger;
 
 public class FrontendSearchResponse {
-        private BigInteger numero;
+        private String prueba;
 
 public FrontendSearchResponse() {
            
 
         }
-        public FrontendSearchResponse(BigInteger numero) {
-            this.numero = numero;
+        public FrontendSearchResponse(String prueba) {
+            this.prueba = prueba;
 
         }
 
-        public BigInteger getnumero() {
-            return numero;
+        public String getnumero() {
+            return prueba;
         }
 
    

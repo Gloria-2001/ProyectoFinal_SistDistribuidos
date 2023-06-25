@@ -1,29 +1,6 @@
-/*
- *  MIT License
- *
- *  Copyright (c) 2019 Michael Pogrebinsky - Distributed Systems & Cloud Computing with Java
- *
- *  Permission is hereby granted, free of charge, to any person obtaining a copy
- *  of this software and associated documentation files (the "Software"), to deal
- *  in the Software without restriction, including without limitation the rights
- *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- *  copies of the Software, and to permit persons to whom the Software is
- *  furnished to do so, subject to the following conditions:
- *
- *  The above copyright notice and this permission notice shall be included in all
- *  copies or substantial portions of the Software.
- *
- *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.
- */
-
 package com.mycompany.app;
 
+import com.mycompany.app.networking.Aggregator;
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -33,28 +10,12 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.io.InputStream;  
-import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.StringTokenizer;
-
+import java.util.List;
+import java.util.Arrays;
 import com.fasterxml.jackson.databind.DeserializationFeature;   
 import com.fasterxml.jackson.databind.ObjectMapper;             
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;   
-
-import java.io.IOException;
-import java.net.URI;
-import java.io.*;
-import java.util.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.lang.Object;
-import java.nio.charset.StandardCharsets;
-import java.net.http.HttpRequest.BodyPublishers;
-
-
 
 public class WebServer {
    
@@ -62,13 +23,11 @@ public class WebServer {
     private static final String HOME_PAGE_ENDPOINT = "/";
     private static final String HOME_PAGE_UI_ASSETS_BASE_DIR = "/ui_assets/";
     private static final String ENDPOINT_PROCESS = "/procesar_datos";
-    private static final String SUB_PROCESS = "/dividir";
 
-    private static final HttpClient httpClient = HttpClient.newBuilder()
-	.version(HttpClient.Version.HTTP_1_1)
-	.connectTimeout(Duration.ofSeconds(10))
-	.build();
-
+    private static final String WORKER_ADDRESS_1 = "http://127.0.0.1:8080/task";
+    private static final String WORKER_ADDRESS_2 = "http://127.0.0.1:8081/task";
+    private static final String WORKER_ADDRESS_3 = "http://127.0.0.1:8082/task";
+    
     private final int port; 
     private HttpServer server; 
     private final ObjectMapper objectMapper;
@@ -86,25 +45,19 @@ public class WebServer {
             e.printStackTrace();
             return;
         }
-        
+
         HttpContext statusContext = server.createContext(STATUS_ENDPOINT); 
         HttpContext taskContext = server.createContext(ENDPOINT_PROCESS);
         HttpContext homePageContext = server.createContext(HOME_PAGE_ENDPOINT);
-        HttpContext subProcessContext = server.createContext(SUB_PROCESS);
         statusContext.setHandler(this::handleStatusCheckRequest);
         taskContext.setHandler(this::handleTaskRequest);
         homePageContext.setHandler(this::handleRequestForAsset);
-        subProcessContext.setHandler(this::handleSubRequest);
 
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
     }
-    
-    
 
     private void handleRequestForAsset(HttpExchange exchange) throws IOException {
-       // System.out.println("Primer método HTTP: " + exchange.getRequestMethod());
-
         if (!exchange.getRequestMethod().equalsIgnoreCase("get")) {
             exchange.close();
             return;
@@ -113,7 +66,7 @@ public class WebServer {
         byte[] response;
 
         String asset = exchange.getRequestURI().getPath(); 
-        //System.out.println("Asset: " + asset);
+
         if (asset.equals(HOME_PAGE_ENDPOINT)) { 
             response = readUiAsset(HOME_PAGE_UI_ASSETS_BASE_DIR + "index.html");
         } else {
@@ -150,47 +103,32 @@ public class WebServer {
         }
 
         try {
+            Aggregator aggregator = new Aggregator();
+            String task1,task2,task3;
             FrontendSearchRequest frontendSearchRequest = objectMapper.readValue(exchange.getRequestBody().readAllBytes(), FrontendSearchRequest.class); 
-            String frase = frontendSearchRequest.getSearchQuery(); //Obtenemos la frase directo de la pagina
-            int numero = Integer.parseInt(frase);
-            //voy a crear el cliente que manda 3 solicitudes diferentes a los servidores con los rangos
-            BigInteger result = BigInteger.ONE;
-            String ports[] = {"3001","3002","3003"};
- 
-	List<Range> ranges = divideIntoRanges(numero, 3);
-	int i = 0;
-	for (Range range : ranges) {
-	System.out.println("Inicio: " + range.getStart() + ", Fin: " + range.getEnd());
-	byte[] responseSubBytes = Sender("localhost:"+ports[i],range.getStart()+","+range.getEnd());  
-	FrontendSearchResponse objeto = objectMapper.readValue(responseSubBytes,FrontendSearchResponse.class);
-	BigInteger bigInteger = objeto.getnumero();
-	result = result.multiply(bigInteger); 
-	i++;
-	}
-                    
-            System.out.println("Enviando: "+result);              
-            FrontendSearchResponse frontendSearchResponse = new FrontendSearchResponse(result);
-            byte[] responseBytes = objectMapper.writeValueAsBytes(frontendSearchResponse);
-	    
-            sendResponse(responseBytes, exchange);
+            String frase = frontendSearchRequest.getSearchQuery();
+            StringTokenizer st = new StringTokenizer(frase);
+            String aux = ";" + st.nextToken();
+            while(st.hasMoreTokens()){
+                aux = aux + "," + st.nextToken();
+            }
+            task1 = "1,15"+aux;
+            task2 = "16,30"+aux;
+            task3 = "31,46"+aux;
+            List<String> results = aggregator.sendTasksToWorkers(Arrays.asList(WORKER_ADDRESS_1, WORKER_ADDRESS_2, WORKER_ADDRESS_3),
+                Arrays.asList(task1, task2, task3));
             
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-    }
-    
-    private void handleSubRequest(HttpExchange exchange) throws IOException {
-        if (!exchange.getRequestMethod().equalsIgnoreCase("post")) { 
-            exchange.close();
-            return;
-        }
-
-        try {
-            byte[] requestBytes = exchange.getRequestBody().readAllBytes(); //LEE ALGO ASI "32,34"
-            byte[] responseBytes = calculateResponse(requestBytes);
+            //Código para recibir datos de prueba
+            /*String response = "";
+            for(String result : results){
+                StringTokenizer st2 = new StringTokenizer(result,",");
+                while(st2.hasMoreTokens()){
+                    response = response + st2.nextToken();
+                } 
+            }*/
+            FrontendSearchResponse frontendSearchResponse = new FrontendSearchResponse(task1);
+            byte[] responseBytes = objectMapper.writeValueAsBytes(frontendSearchResponse);
             sendResponse(responseBytes, exchange);
-
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -206,132 +144,13 @@ public class WebServer {
         String responseMessage = "El servidor está vivo\n";
         sendResponse(responseMessage.getBytes(), exchange);
     }
-    
-    private byte[] calculateResponse(byte[] requestBytes) {
-	String rango = new String(requestBytes);
-        String[] limites = rango.split(",");
-        int inicio = Integer.parseInt(limites[0]);
-        int fin = Integer.parseInt(limites[1]);
-        String bodyString = new String("1");
-	for (int i=inicio;i<=fin;i++)
-	{
-	bodyString =  bodyString + "," + Integer.toString(i);
-	}
-	
-        String[] stringNumbers = bodyString.split(",");
-        BigInteger result = BigInteger.ONE;
-        
-        for (String number : stringNumbers) {
-            BigInteger bigInteger = new BigInteger(number);
-            result = result.multiply(bigInteger);
-        
-        }
-        try{
-        //System.out.println(Arrays.toString(stringNumbers) +" = "+result );
-        FrontendSearchResponse frontendSearchResponse = new FrontendSearchResponse(result);
-        byte[] responseBytes = objectMapper.writeValueAsBytes(frontendSearchResponse);
-        return responseBytes;
-        }catch(Exception ex)
-	{
-	System.out.println(ex.getStackTrace());
-	}
-	return null;
-}
 
-	private static byte[] Sender(String ip, String Rango)
-	{
-	byte[] requestBytesAux = null;
-	try{
-	// Crear la solicitud POST
-	HttpRequest request = HttpRequest.newBuilder()
-	.POST(HttpRequest.BodyPublishers.ofString(Rango))
-	.uri(URI.create("http://"+ip+"/dividir"))
-	.setHeader("Content-Type", "text/plain")
-	.build();
-
-	// Enviar la solicitud al servidor
-	HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-
-	// print response headers
-	HttpHeaders headers = response.headers();
-	headers.map().forEach((k, v) -> System.out.println(k + ":" + v));
-
-	// print status code
-	System.out.println(response.statusCode());
-
-	// print response body
-	byte[] requestBytes = response.body();
-	return requestBytes;
-	}catch(Exception ex)
-	{
-	System.out.println(ex.getStackTrace());
-	}
-	return requestBytesAux;
-	}
-	
-    
-	
     private void sendResponse(byte[] responseBytes, HttpExchange exchange) throws IOException {
-
         exchange.sendResponseHeaders(200, responseBytes.length);
-        //System.out.println("Bytes sent: " + responseBytes.length);
         OutputStream outputStream = exchange.getResponseBody();
         outputStream.write(responseBytes);
         outputStream.flush();
         outputStream.close();
-    }
-    
-    public static List<Range> divideIntoRanges(int number, int n) {
-        List<Range> ranges = new ArrayList<>();
-        
-        // Calcula el tamaño de cada rango
-        int rangeSize = number / n;
-        
-        // Calcula el residuo, que se distribuirá entre los rangos
-        int remainder = number % n;
-        
-        // Crea los rangos
-        int start = 1;
-        int end;
-        for (int i = 0; i < n; i++) {
-            // Incrementa el tamaño del rango si hay residuo
-            int extra = i < remainder ? 1 : 0;
-            
-            // Calcula los límites del rango actual
-            end = start + rangeSize + extra -1;
-            
-            // Crea un objeto Range con el inicio y fin del rango
-            Range range = new Range(start, end);
-            
-            // Agrega el rango a la lista
-            ranges.add(range);
-            
-            // Actualiza el inicio del próximo rango
-            start = end +1;
-        }
-        
-        return ranges;
-    }
-
-
-}
-
-
-class Range {
-    private int start;
-    private int end;
-    
-    public Range(int start, int end) {
-        this.start = start;
-        this.end = end;
-    }
-    
-    public int getStart() {
-        return start;
-    }
-    
-    public int getEnd() {
-        return end;
     }
 }
 
