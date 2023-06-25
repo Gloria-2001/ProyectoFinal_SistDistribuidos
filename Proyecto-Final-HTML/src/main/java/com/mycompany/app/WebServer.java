@@ -7,12 +7,12 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.io.InputStream;  
-import java.util.StringTokenizer;
-import java.util.List;
-import java.util.Arrays;
+import java.io.InputStream;
+import java.util.*;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;   
 import com.fasterxml.jackson.databind.ObjectMapper;             
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;   
@@ -24,9 +24,9 @@ public class WebServer {
     private static final String HOME_PAGE_UI_ASSETS_BASE_DIR = "/ui_assets/";
     private static final String ENDPOINT_PROCESS = "/procesar_datos";
 
-    private static final String WORKER_ADDRESS_1 = "http://127.0.0.1:8080/task";
-    private static final String WORKER_ADDRESS_2 = "http://127.0.0.1:8081/task";
-    private static final String WORKER_ADDRESS_3 = "http://127.0.0.1:8082/task";
+    private static final String WORKER_ADDRESS_1 = "http://127.0.0.1:8080";
+    private static final String WORKER_ADDRESS_2 = "http://127.0.0.1:8081";
+    private static final String WORKER_ADDRESS_3 = "http://127.0.0.1:8082";
     
     private final int port; 
     private HttpServer server; 
@@ -105,31 +105,82 @@ public class WebServer {
         try {
             Aggregator aggregator = new Aggregator();
             String task1,task2,task3;
-            FrontendSearchRequest frontendSearchRequest = objectMapper.readValue(exchange.getRequestBody().readAllBytes(), FrontendSearchRequest.class); 
-            String frase = frontendSearchRequest.getSearchQuery();
+            String frase = new String(exchange.getRequestBody().readAllBytes());
+            
             StringTokenizer st = new StringTokenizer(frase);
             String aux = ";" + st.nextToken();
             while(st.hasMoreTokens()){
                 aux = aux + "," + st.nextToken();
             }
-            task1 = "1,15"+aux;
-            task2 = "16,30"+aux;
-            task3 = "31,46"+aux;
-            List<String> results = aggregator.sendTasksToWorkers(Arrays.asList(WORKER_ADDRESS_1, WORKER_ADDRESS_2, WORKER_ADDRESS_3),
-                Arrays.asList(task1, task2, task3));
+            task1 = "0,14"+aux;
+            task2 = "15,29"+aux;
+            task3 = "30,45"+aux;
+            System.out.println(task1);
+
+            List<String> results = aggregator.sendTasksToWorkers(Arrays.asList(WORKER_ADDRESS_1, WORKER_ADDRESS_2, WORKER_ADDRESS_3),Arrays.asList(task1, task2, task3));
+
+            String respuestafinal = "";
+            for (String string : results) {
+                respuestafinal += string;
+            }
             
-            //Código para recibir datos de prueba
-            /*String response = "";
-            for(String result : results){
-                StringTokenizer st2 = new StringTokenizer(result,",");
-                while(st2.hasMoreTokens()){
-                    response = response + st2.nextToken();
-                } 
-            }*/
-            FrontendSearchResponse frontendSearchResponse = new FrontendSearchResponse(task1);
-            byte[] responseBytes = objectMapper.writeValueAsBytes(frontendSearchResponse);
+            respuestafinal = respuestafinal.substring(0, respuestafinal.length()-2);
+            String[] respuestas = respuestafinal.split(";");
+
+            Map<String,Integer> conteo = new HashMap<>();
+            ArrayList<Conteo> registro = new ArrayList<>();
+            
+            for (int i = 0; i < respuestas.length; i++) {
+                String nombreLibro = respuestas[i].split(":")[0];
+                String[] parametros = respuestas[i].split(":")[1].split(",");
+                
+                if (!conteo.containsKey(parametros[0])) {
+                    conteo.put(parametros[0], 0);
+                }
+
+                if (!parametros[1].equals("0")) {
+                    conteo.replace(parametros[0], conteo.get(parametros[0])+1);
+                }
+
+                boolean existe = true;
+                for (int j = 0; j < registro.size(); j++) {
+                    if(registro.get(j).libro.equals(nombreLibro)){
+                        registro.get(j).agregarPalabra(parametros[0], Long.parseLong(parametros[1]), Double.parseDouble(parametros[1]) / Double.valueOf(parametros[2]));
+                        existe = false;
+                    }                    
+                }
+
+                if(existe){
+                    registro.add(new Conteo(nombreLibro));
+                    registro.get(registro.size()-1). agregarPalabra(parametros[0], Long.parseLong(parametros[1]), Double.parseDouble(parametros[1]) / Double.valueOf(parametros[2]));
+                }
+            }
+
+            for (Map.Entry<String, Integer> entry : conteo.entrySet()) {
+                System.out.println( entry.getKey() + "  "+ entry.getValue() );
+            }
+            
+
+            for (int i = 0; i < registro.size(); i++) {
+                registro.get(i).calcularPuntuacion(conteo);
+
+            }
+
+            Collections.sort(registro,new Comparator<Conteo>() {
+                public int compare(Conteo o1, Conteo o2) {
+                    if(o1.puntuacion > o2.puntuacion){
+                        return 1;
+                    }else if(o1.puntuacion < o2.puntuacion){
+                        return -1;
+                    }else{
+                        return 0;
+                    }
+                };
+            });
+
+            byte[] responseBytes = Arrays.toString(registro.toArray()).getBytes();
             sendResponse(responseBytes, exchange);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return;
         }
@@ -152,6 +203,50 @@ public class WebServer {
         outputStream.flush();
         outputStream.close();
     }
+
+
+    class Conteo {
+        String libro;
+        double puntuacion;
+        Map<String,Cantidad> palabras;
+
+        public Conteo(String nombre){
+            libro = nombre;
+            palabras = new HashMap<>();
+        }
+
+        public void agregarPalabra(String nom, long cantidad, double tf){
+            palabras.put(nom, new Cantidad(cantidad,tf));
+        }
+
+        public double calcularPuntuacion(Map<String,Integer> cantidad){
+            puntuacion = 0;
+            for (Map.Entry<String, Integer> entry : cantidad.entrySet()) {
+                String clave = entry.getKey();
+                Integer valor = entry.getValue();
+                puntuacion += palabras.get(clave).tf * Math.log10((double)46/(double)valor);
+            }
+            return puntuacion;
+        }
+
+
+        @Override
+        public String toString() {
+            String salida = "" + libro + "  "+puntuacion+"\n";
+            for (Map.Entry<String, Cantidad> entry : palabras.entrySet()) {
+                salida += entry.getKey() + "  "+ entry.getValue().cantidad + "\n";
+            }
+            return salida;
+        }
+    }
+
+    class Cantidad{
+        long cantidad;
+        double tf;
+
+        public Cantidad(long cantidad, double tf){
+            this.cantidad = cantidad;
+            this.tf = tf;
+        }
+    }
 }
-
-

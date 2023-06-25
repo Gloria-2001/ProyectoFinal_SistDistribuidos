@@ -15,6 +15,19 @@ public class WebClient {
                 .build();
     }
 
+    public boolean conexion(String url){
+        HttpRequest request = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofByteArray(" ".getBytes()))
+                .uri(URI.create(url))
+                .build();
+        try {
+            client.send(request,  HttpResponse.BodyHandlers.ofString());
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public CompletableFuture<String> sendTask(String url, byte[] requestPayload) {
         HttpRequest request = HttpRequest.newBuilder()
                 .POST(HttpRequest.BodyPublishers.ofByteArray(requestPayload))

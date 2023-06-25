@@ -1,0 +1,106 @@
+*{
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Helvetica;
+  padding-bottom: 120px;
+}
+
+#top{
+  display: grid;
+  grid-template-columns: 150px auto 150px;
+}
+
+.imgSchool{
+  width: 130px;
+}
+
+#escom{
+  margin-top: 15px;
+}
+
+#schools{
+  text-align: center;
+  margin-top: 30px;
+}
+
+#layout {
+  padding: 20px 5px 50px;
+  font-size: 25px;
+  text-align: center;
+  margin: 0 auto;
+  width: 600px;
+  margin-top: 50px;
+}
+
+#search_header{
+  display: grid;
+  grid-template-columns: auto 35px;
+  grid-gap: 15px;
+  width: 100px;
+  margin-left: 30%;
+  margin-bottom: 15px;
+}
+
+#search_title{
+  font-weight: lighter;
+  letter-spacing: 3px;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+#search_logo{
+  width: 30px;
+  height: 30px;
+  margin-top: 25px;
+}
+
+input {
+  height: 25px;
+}
+
+#search_text {
+  width: 500px;
+}
+
+button {
+  background: #0084ff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 15px;
+  color: #fff;
+}
+
+#results {
+  display: none;
+  white-space: pre-wrap;
+}
+
+#results table {
+  margin-left:auto;
+  margin-right:auto;
+}
+
+footer{
+  background-color: #addaeb;
+  padding: 5px;
+  height: 120px;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+footer h3{
+  text-align: center;
+}
+
+#team{
+  padding: 0;
+  display: grid;
+  grid-template-columns: 200px 80px;
+  column-gap: 15px;
+  row-gap: 10px;
+  margin-left: 40%;
+}
