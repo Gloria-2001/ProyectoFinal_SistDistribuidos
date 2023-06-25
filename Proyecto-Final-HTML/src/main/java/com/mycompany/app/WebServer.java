@@ -14,7 +14,9 @@ import java.io.InputStream;
 import java.util.*;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;   
-import com.fasterxml.jackson.databind.ObjectMapper;             
+import com.fasterxml.jackson.databind.ObjectMapper;    
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;  
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;   
 
 public class WebServer {
@@ -23,6 +25,7 @@ public class WebServer {
     private static final String HOME_PAGE_ENDPOINT = "/";
     private static final String HOME_PAGE_UI_ASSETS_BASE_DIR = "/ui_assets/";
     private static final String ENDPOINT_PROCESS = "/procesar_datos";
+    private static final String BOOKS_ENDPOINT = "/LIBROS_TXT/";
 
     private static final String WORKER_ADDRESS_1 = "http://127.0.0.1:8080";
     private static final String WORKER_ADDRESS_2 = "http://127.0.0.1:8081";
@@ -49,9 +52,11 @@ public class WebServer {
         HttpContext statusContext = server.createContext(STATUS_ENDPOINT); 
         HttpContext taskContext = server.createContext(ENDPOINT_PROCESS);
         HttpContext homePageContext = server.createContext(HOME_PAGE_ENDPOINT);
+        HttpContext contentPageContext = server.createContext(BOOKS_ENDPOINT);
         statusContext.setHandler(this::handleStatusCheckRequest);
         taskContext.setHandler(this::handleTaskRequest);
         homePageContext.setHandler(this::handleRequestForAsset);
+        contentPageContext.setHandler(this::handleRequestForAsset);
 
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
@@ -92,6 +97,8 @@ public class WebServer {
             contentType = "text/javascript";
         } else if (asset.endsWith("css")) {
             contentType = "text/css";
+        } else if (asset.endsWith("txt")) {
+            contentType = "text/plain";
         }
         exchange.getResponseHeaders().add("Content-Type", contentType);
     }
@@ -159,11 +166,9 @@ public class WebServer {
             for (Map.Entry<String, Integer> entry : conteo.entrySet()) {
                 System.out.println( entry.getKey() + "  "+ entry.getValue() );
             }
-            
 
             for (int i = 0; i < registro.size(); i++) {
                 registro.get(i).calcularPuntuacion(conteo);
-
             }
 
             Collections.sort(registro,new Comparator<Conteo>() {
@@ -177,8 +182,13 @@ public class WebServer {
                     }
                 };
             });
-
-            byte[] responseBytes = Arrays.toString(registro.toArray()).getBytes();
+            ObjectNode root = objectMapper.createObjectNode();
+            ArrayNode array = root.putArray("Libros");
+            for(Conteo obj : registro){
+                FrontendSearchResponse fsr = new FrontendSearchResponse(obj.libro,obj.puntuacion,obj.getpalabras());
+                array.addPOJO(fsr);
+            }
+            byte[] responseBytes = objectMapper.writeValueAsBytes(root);
             sendResponse(responseBytes, exchange);
         } catch (Exception e) {
             e.printStackTrace();
@@ -229,7 +239,14 @@ public class WebServer {
             return puntuacion;
         }
 
-
+        public String getpalabras(){
+            String salida = "";
+            for (Map.Entry<String, Cantidad> entry : palabras.entrySet()) {
+                salida += entry.getKey() + "  "+ entry.getValue().cantidad + "\n";
+            }
+            return salida;
+        }
+        
         @Override
         public String toString() {
             String salida = "" + libro + "  "+puntuacion+"\n";
