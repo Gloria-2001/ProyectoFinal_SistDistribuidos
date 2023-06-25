@@ -13,16 +13,28 @@ public class Aggregator {
 
     public List<String> sendTasksToWorkers(List<String> workersAddresses, List<String> tasks) {
         CompletableFuture<String>[] futures = new CompletableFuture[tasks.size()];
-        for (int i = 0; i < workersAddresses.size(); i++) {
-            // Se obtiene la dirección del trabajador
-            String workerAddress = workersAddresses.get(i);
-            // Se obtiene una tarea a enviar
-            String task = tasks.get(i);
-            // Se almacenan las tareas en bytes
-            byte[] requestPayload = task.getBytes();
-            // Se envian las tareas al trabajador usando el método sendTask y se asocian a cada una de los futures
-            futures[i] = webClient.sendTask(workerAddress, requestPayload);
+        
+        int j=0;
+
+        //i = solicitud
+        //j = servidor
+        for (int i = 0; i < futures.length; i++) {
+            if(webClient.conexion(workersAddresses.get(j) + ENDPOINT_ESTADO)){
+                String workerAddress = workersAddresses.get(j)+ENDPOINT_BUSCAR;
+                String task = tasks.get(i);
+                byte[] requestPayload = task.getBytes();
+                futures[i] = webClient.sendTask(workerAddress, requestPayload);
+            }else{
+                i--;
+            }
+            j++;
+
+            if(j == 3){
+                j = 0;
+            }
         }
+        
+
         // Se declara una lista donde se reciben los resultados
         List<String> results = new ArrayList();
         for (int i = 0; i < tasks.size(); i++) {
