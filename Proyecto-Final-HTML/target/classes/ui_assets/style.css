@@ -26,21 +26,12 @@ body {
   margin-top: 30px;
 }
 
-#layout {
-  padding: 20px 5px 50px;
-  font-size: 25px;
-  text-align: center;
-  margin: 0 auto;
-  width: 600px;
-  margin-top: 50px;
-}
-
 #search_header{
   display: grid;
   grid-template-columns: auto 35px;
   grid-gap: 15px;
   width: 100px;
-  margin-left: 30%;
+  margin-left: 45%;
   margin-bottom: 15px;
 }
 
@@ -53,11 +44,12 @@ body {
 #search_logo{
   width: 30px;
   height: 30px;
-  margin-top: 25px;
+  margin-top: 5px;
 }
 
 input {
   height: 25px;
+  margin-left: 35%;
 }
 
 #search_text {
@@ -71,6 +63,8 @@ button {
   padding: 8px 14px;
   font-size: 15px;
   color: #fff;
+  margin-left: 48%;
+  margin-bottom: 10px; 
 }
 
 #results {
@@ -79,15 +73,19 @@ button {
 }
 
 #results table {
-  margin-left:auto;
-  margin-right:auto;
+  width: 100% !important; 
+  border-collapse: collapse;
+}
+
+#results td, #results th{
+  border: 1px solid #dddddd;
 }
 
 footer{
   background-color: #addaeb;
   padding: 5px;
   height: 120px;
-  position: absolute;
+  position: fixed;
   bottom: 0;
   width: 100%;
 }
@@ -104,3 +102,4 @@ footer h3{
   row-gap: 10px;
   margin-left: 40%;
 }
+

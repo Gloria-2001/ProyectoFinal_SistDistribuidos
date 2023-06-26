@@ -8,7 +8,7 @@ $( document ).ready(function() {
     //The variables button, searchBox, resultsTable, and resultsWrapper are assigned jQuery objects based on their respective HTML element IDs ($("#submit_button"), $("#search_text"), $("#results table tbody"), and $("#results")).
         var button = $("#submit_button");   
         var searchBox = $("#search_text"); 
-        var resultsTable = $("#results table tbody"); 
+        var resultsTable = $("#results table"); 
         var resultsWrapper = $("#results"); 
     
     //The button.on("click", function(){ ... }); sets up a click event handler for the button element. When the button is clicked, the code inside the function will be executed.
@@ -20,7 +20,7 @@ $( document ).ready(function() {
               contentType: "text/plain",
               data: createRequest(),
               url: "procesar_datos",
-              dataType: "text",
+              dataType: "json",
               success: onHttpResponse
               });
           });
@@ -34,7 +34,7 @@ $( document ).ready(function() {
     //The onHttpResponse function is called when the AJAX request is successful. It checks the status parameter to determine if the request was successful. If successful, it logs the data parameter to the console and calls the addResults function, passing the data object as an argument. If the request fails, it displays an alert with an error message.
         function onHttpResponse(data, status) {
             if (status === "success" ) {
-                console.log(data);
+                //console.log(data);
                 addResults(data);
             } else {
                 alert("Error al conectarse al servidor: " + status);
@@ -44,12 +44,19 @@ $( document ).ready(function() {
     //The addResults function receives the data object as a parameter. It clears the contents of the resultsTable element, shows the resultsWrapper element, and appends a table row to the resultsTable with the received data (cadena) and the number of words (cantidad). The table row is constructed using string concatenation.
         function addResults(data) {
             resultsTable.empty();
-    
-            var cantidad = data.numero;
-            var cadena = "";
+            var cantidad = "";
+            var cadena = data.Libros[0]["libro"];
             resultsWrapper.show();
-            resultsTable.append("<thead><tr><th>   </th><th>   Factorial</th></tr></thead><tr><td>" + cadena + "</td><td>" + cantidad + "</td></tr>");
+            resultsTable.append("<tr><th><strong>Título<\strong></th><th><strong>Puntuación</strong></th><th><strong>Frecuencia</strong></th></tr>");
+            for(var i = 0; i < data.Libros.length; i++){
+                var puntaje = data.Libros[i]["puntuacion"];
+                var cadena = data.Libros[i]["nombre"];
+                var palabras = data.Libros[i]["palabras"];
+                var url = data.Libros[i]["libro"];
+                resultsTable.append(`<tr><td><a href="${url}">${cadena}</a></td><td>${puntaje}</td><td>${palabras}</td></tr>`)
+            }
         }
     });
+    
     
     
