@@ -8,7 +8,7 @@ $( document ).ready(function() {
     //The variables button, searchBox, resultsTable, and resultsWrapper are assigned jQuery objects based on their respective HTML element IDs ($("#submit_button"), $("#search_text"), $("#results table tbody"), and $("#results")).
         var button = $("#submit_button");   
         var searchBox = $("#search_text"); 
-        var resultsTable = $("#results table tbody"); 
+        var resultsTable = $("#results table"); 
         var resultsWrapper = $("#results"); 
     
     //The button.on("click", function(){ ... }); sets up a click event handler for the button element. When the button is clicked, the code inside the function will be executed.
@@ -47,7 +47,7 @@ $( document ).ready(function() {
             var cantidad = "";
             var cadena = data.Libros[0]["libro"];
             resultsWrapper.show();
-            resultsTable.append("<thead><tr><th>Título</th><th>Puntuación</th><th>Frecuencia</th></tr></thead>");
+            resultsTable.append("<tr><th><strong>Título<\strong></th><th><strong>Puntuación</strong></th><th><strong>Frecuencia</strong></th></tr>");
             for(var i = 0; i < data.Libros.length; i++){
                 var puntaje = data.Libros[i]["puntuacion"];
                 var cadena = data.Libros[i]["nombre"];
@@ -57,5 +57,6 @@ $( document ).ready(function() {
             }
         }
     });
+    
     
     
