@@ -174,9 +174,9 @@ public class WebServer {
             Collections.sort(registro,new Comparator<Conteo>() {
                 public int compare(Conteo o1, Conteo o2) {
                     if(o1.puntuacion > o2.puntuacion){
-                        return 1;
-                    }else if(o1.puntuacion < o2.puntuacion){
                         return -1;
+                    }else if(o1.puntuacion < o2.puntuacion){
+                        return 1;
                     }else{
                         return 0;
                     }

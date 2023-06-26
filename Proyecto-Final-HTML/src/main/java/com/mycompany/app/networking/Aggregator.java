@@ -6,6 +6,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class Aggregator {
     private WebClient webClient;
+    private static final String ENDPOINT_ESTADO = "/task";
+     private static final String ENDPOINT_BUSCAR = "/searchtoken";
 
     public Aggregator() {
         this.webClient = new WebClient();
